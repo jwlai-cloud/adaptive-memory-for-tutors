@@ -1,0 +1,32 @@
+{
+  "domain": "japanese-kana",
+  "pairs": [
+    {
+      "id": "kana-so-n",
+      "label_a": "\u30bd (so)",
+      "label_b": "\u30f3 (n)",
+      "description": "Katakana pair frequently confused at the end of words",
+      "synthetic_history": [
+        {"correct": false, "context": "confused at end of word - week 1"},
+        {"correct": false, "context": "confused at end of word - week 1"},
+        {"correct": false, "context": "still confused - week 2"},
+        {"correct": false, "context": "still confused - week 2"},
+        {"correct": true,  "context": "got it right - week 3"},
+        {"correct": true,  "context": "got it right - week 3"},
+        {"correct": true,  "context": "consistent - week 3"}
+      ]
+    },
+    {
+      "id": "kana-tsu-sokuon",
+      "label_a": "\u3064 (tsu)",
+      "label_b": "\u3063 (small tsu / sokuon)",
+      "description": "Hiragana pair confused around gemination (doubled consonants)",
+      "synthetic_history": [
+        {"correct": false, "context": "week 1"},
+        {"correct": true,  "context": "week 2, improving"},
+        {"correct": true,  "context": "week 2"},
+        {"correct": true,  "context": "week 3, resolved"}
+      ]
+    }
+  ]
+}

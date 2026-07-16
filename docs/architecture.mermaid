@@ -1,0 +1,50 @@
+flowchart TB
+    subgraph TutorLayer["Tutor / Client Layer (any integrator)"]
+        DemoUI["Demo Tutor UI<br/>(hiragana/katakana case study)"]
+        ThirdPartyTutor["Third-party Tutor Agent<br/>(school / indie builder's own bot)"]
+        Widget["Embeddable Insight Widget<br/>(iframe / script tag)"]
+    end
+
+    subgraph IntegrationSurfaces["Integration Surfaces (pick any)"]
+        REST["REST API<br/>/v1/events, /v1/insights, /v1/pairs"]
+        MCP["MCP Server<br/>log_confusion_event, get_insight_state,<br/>get_confusion_heatmap"]
+    end
+
+    subgraph CoreEngine["Adaptive Memory for Tutors Engine (our product — Codex-built)"]
+        Ingest["Ingestion Layer<br/>validates event, resolves tenant_id + user_id"]
+        InsightEngine["Insight Engine (GPT-5.6)<br/>reads current + as-of graph state<br/>decides: escalate / retire / no-change<br/>writes reasoning string"]
+    end
+
+    subgraph MemoryLayer["Memory Substrate — Zep Cloud (managed, existing product)"]
+        direction TB
+        Graphiti["Graphiti Temporal Knowledge Graph"]
+        UserGraphs["Per-student isolated graphs<br/>(user_id = student, scoped by tenant_id)"]
+        BiTemporal["Bi-temporal edges<br/>valid_at / invalid_at, event time vs ingestion time<br/>old facts invalidated, not deleted"]
+        Graphiti --> UserGraphs
+        Graphiti --> BiTemporal
+    end
+
+    DemoUI --> REST
+    ThirdPartyTutor --> MCP
+    ThirdPartyTutor --> REST
+    Widget --> REST
+
+    REST --> Ingest
+    MCP --> Ingest
+
+    Ingest -->|"write episode<br/>(confusion event)"| MemoryLayer
+    MemoryLayer -->|"current state +<br/>as-of point-in-time query"| InsightEngine
+    InsightEngine -->|"insight decision<br/>+ reasoning"| MemoryLayer
+    InsightEngine -->|"insight response"| REST
+    InsightEngine -->|"insight response"| MCP
+
+    subgraph Hosting["Hosting (all scale-to-zero, no VM)"]
+        Vercel["Frontend: Vercel/Netlify<br/>(Demo UI + Widget)"]
+        Serverless["Backend: AWS Lambda / Cloud Run<br/>(Ingestion + Insight Engine)"]
+        ZepManaged["Zep Cloud managed service<br/>(no self-hosted DB to operate)"]
+    end
+
+    DemoUI -.hosted on.-> Vercel
+    Widget -.hosted on.-> Vercel
+    CoreEngine -.hosted on.-> Serverless
+    MemoryLayer -.hosted on.-> ZepManaged
