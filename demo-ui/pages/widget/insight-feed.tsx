@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { Insight } from "../../lib/api";
 
 const DEFAULT_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
@@ -21,21 +21,29 @@ function readParam(name: string, fallback: string) {
   return new URLSearchParams(window.location.search).get(name) || fallback;
 }
 
+const DEFAULT_CONFIG = {
+  apiBase: DEFAULT_API_BASE.replace(/\/$/, ""),
+  apiKey: DEFAULT_API_KEY || "",
+  tenantId: "demo-school",
+  studentRef: "demo-student-1",
+  pairId: "kana-so-n",
+};
+
 export default function InsightFeedWidget() {
   const [feed, setFeed] = useState<Insight[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [config, setConfig] = useState(DEFAULT_CONFIG);
 
-  const config = useMemo(
-    () => ({
+  useEffect(() => {
+    setConfig({
       apiBase: readParam("apiBase", DEFAULT_API_BASE).replace(/\/$/, ""),
       apiKey: readParam("apiKey", DEFAULT_API_KEY || ""),
       tenantId: readParam("tenantId", "demo-school"),
       studentRef: readParam("studentRef", "demo-student-1"),
       pairId: readParam("pairId", "kana-so-n"),
-    }),
-    []
-  );
+    });
+  }, []);
 
   const load = useCallback(async () => {
     if (!config.apiKey) {
@@ -104,7 +112,7 @@ export default function InsightFeedWidget() {
                   <span className={`border px-2 py-0.5 text-xs font-bold ${decisionClass(insight.decision)}`}>
                     {decisionLabel(insight.decision)}
                   </span>
-                  <time className="text-xs text-ink/55">{new Date(insight.timestamp).toLocaleString()}</time>
+                  <time suppressHydrationWarning className="text-xs text-ink/55">{new Date(insight.timestamp).toLocaleString()}</time>
                 </div>
                 <p className="mt-2 text-sm leading-6">{insight.reasoning}</p>
               </li>

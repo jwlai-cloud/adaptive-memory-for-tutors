@@ -180,7 +180,8 @@ def get_insight_history(
     uid = zep_user_id(tenant_id, student_ref)
     response = get_client().graph.episode.get_by_user_id(user_id=uid, lastn=100)
     insights: list[InsightLog] = []
-    for episode in response.episodes:
+    episodes = response.episodes if response and response.episodes else []
+    for episode in episodes:
         metadata = episode.metadata or {}
         if metadata.get("event_type") != "insight_log" or metadata.get("pair_id") != pair_id:
             continue
@@ -222,9 +223,10 @@ def _event_from_episode(episode: Any, pair_id: str) -> Optional[dict[str, Any]]:
 def _events_for_pair(uid: str, pair_id: str) -> list[dict[str, Any]]:
     # ``lastn`` is Zep's documented episode-listing argument (not pagination).
     response = get_client().graph.episode.get_by_user_id(user_id=uid, lastn=100)
+    episodes = response.episodes if response and response.episodes else []
     events = [
         parsed
-        for episode in response.episodes
+        for episode in episodes
         if (parsed := _event_from_episode(episode, pair_id)) is not None
     ]
     return sorted(events, key=lambda item: item["timestamp"])

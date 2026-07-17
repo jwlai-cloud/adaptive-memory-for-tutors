@@ -38,7 +38,7 @@ export default function ComparePage() {
               <div className="mt-4"><DecisionBadge decision={insight.decision} /></div>
               <h3 className="mt-4 text-xl font-bold">{insight.reasoning}</h3>
               <p className="mt-3 leading-7 text-ink/80">This recommendation is derived from {state?.recent_facts.length} stored attempts for the same student and concept pair.</p>
-              <p className="mt-8 border-t border-ink/10 pt-4 text-sm text-ink/60">Last updated {new Date(insight.timestamp).toLocaleString()}.</p>
+              <p suppressHydrationWarning className="mt-8 border-t border-ink/10 pt-4 text-sm text-ink/60">Last updated {new Date(insight.timestamp).toLocaleString()}.</p>
             </> : <div className="mt-5"><h3 className="text-xl font-bold">No decision logged yet.</h3><p className="mt-3 leading-7 text-ink/80">The live history is loaded; post one event through the API to create the first GPT-backed insight.</p></div>}
           </AsyncPanel>
         </article>
