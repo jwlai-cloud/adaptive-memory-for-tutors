@@ -1,9 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Insight } from "../../lib/api";
 
-const DEFAULT_API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000";
-const DEFAULT_API_KEY = process.env.NEXT_PUBLIC_API_KEY;
-
 function decisionLabel(decision: Insight["decision"]) {
   if (decision === "retire") return "Resolved";
   if (decision === "escalate") return "Needs attention";
@@ -22,8 +19,6 @@ function readParam(name: string, fallback: string) {
 }
 
 const DEFAULT_CONFIG = {
-  apiBase: DEFAULT_API_BASE.replace(/\/$/, ""),
-  apiKey: DEFAULT_API_KEY || "",
   tenantId: "demo-school",
   studentRef: "demo-student-1",
   pairId: "kana-so-n",
@@ -37,8 +32,6 @@ export default function InsightFeedWidget() {
 
   useEffect(() => {
     setConfig({
-      apiBase: readParam("apiBase", DEFAULT_API_BASE).replace(/\/$/, ""),
-      apiKey: readParam("apiKey", DEFAULT_API_KEY || ""),
       tenantId: readParam("tenantId", "demo-school"),
       studentRef: readParam("studentRef", "demo-student-1"),
       pairId: readParam("pairId", "kana-so-n"),
@@ -46,11 +39,6 @@ export default function InsightFeedWidget() {
   }, []);
 
   const load = useCallback(async () => {
-    if (!config.apiKey) {
-      setError("Missing widget API key.");
-      setLoading(false);
-      return;
-    }
     try {
       setError(null);
       const path = `/v1/insights/${encodeURIComponent(config.pairId)}/history`;
@@ -58,9 +46,7 @@ export default function InsightFeedWidget() {
         tenant_id: config.tenantId,
         student_ref: config.studentRef,
       });
-      const response = await fetch(`${config.apiBase}${path}?${query}`, {
-        headers: { Authorization: `Bearer ${config.apiKey}` },
-      });
+      const response = await fetch(`/api/backend${path}?${query}`);
       if (!response.ok) throw new Error(`API ${response.status}`);
       const nextFeed = (await response.json()) as Insight[];
       setFeed(nextFeed);
@@ -85,7 +71,7 @@ export default function InsightFeedWidget() {
         <div className="flex items-start justify-between gap-4 border-b border-ink/15 pb-3">
           <div>
             <p className="text-xs font-bold uppercase tracking-wide text-ink/55">Memory insight</p>
-            <h1 className="mt-1 text-base font-bold">{config.pairId}</h1>
+            <h1 suppressHydrationWarning className="mt-1 text-base font-bold">{config.pairId}</h1>
           </div>
           {latest ? (
             <span className={`border px-2 py-1 text-xs font-bold ${decisionClass(latest.decision)}`}>

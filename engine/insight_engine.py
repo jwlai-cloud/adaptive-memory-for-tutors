@@ -126,6 +126,12 @@ def _parse_insight(content: str) -> tuple[InsightDecision, str]:
     return decision, reasoning
 
 
+def _has_sustained_resolution(recent_facts: list[dict[str, Any]]) -> bool:
+    """Keep the model's retire decision aligned with the public mastery rule."""
+    outcomes = [fact.get("correct") for fact in recent_facts]
+    return len(outcomes) >= 3 and outcomes[-3:] == [True, True, True]
+
+
 def evaluate(event: ConfusionEvent) -> InsightLog:
     """Evaluate the student's latest state and persist the resulting insight."""
     state = get_current_state(event.tenant_id, event.student_ref, event.pair_id)
@@ -141,6 +147,9 @@ def evaluate(event: ConfusionEvent) -> InsightLog:
     )
     content = response.choices[0].message.content or ""
     decision, reasoning = _parse_insight(content)
+    if decision == InsightDecision.RETIRE and not _has_sustained_resolution(recent_facts):
+        decision = InsightDecision.NO_CHANGE
+        reasoning = "The recent history does not yet show three consecutive correct answers."
     insight = InsightLog(
         tenant_id=event.tenant_id,
         pair_id=event.pair_id,

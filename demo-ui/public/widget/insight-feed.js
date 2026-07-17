@@ -4,7 +4,7 @@
 
   var src = new URL(currentScript.src);
   var widgetUrl = new URL("/widget/insight-feed", src.origin);
-  var params = ["apiBase", "apiKey", "tenantId", "studentRef", "pairId"];
+  var params = ["tenantId", "studentRef", "pairId"];
 
   params.forEach(function (name) {
     var value = currentScript.getAttribute("data-" + name.replace(/[A-Z]/g, function (letter) {

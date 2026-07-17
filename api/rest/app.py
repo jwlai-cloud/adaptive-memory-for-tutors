@@ -3,6 +3,7 @@
 import hmac
 import json
 import os
+import re
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -90,6 +91,8 @@ def get_state(pair_id: str, tenant_id: str, student_ref: str) -> dict:
 @api.get("/pairs", response_model=list[ConceptPair])
 def get_pairs(domain: str = Query(..., min_length=1)) -> list[ConceptPair]:
     """List illustrative concept pairs from the requested seed-data domain."""
+    if not re.fullmatch(r"[a-z0-9-]+", domain):
+        raise HTTPException(status_code=404, detail=f"Unknown domain: {domain}")
     path = (_SEED_DATA_DIR / f"domain-{domain}.json").resolve()
     if not path.is_relative_to(_SEED_DATA_DIR) or not path.is_file():
         raise HTTPException(status_code=404, detail=f"Unknown domain: {domain}")

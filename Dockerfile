@@ -8,9 +8,14 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY requirements.txt ./
 RUN pip install --no-cache-dir -r requirements.txt
 
+RUN useradd --system --create-home --uid 10001 appuser
+
 COPY api ./api
 COPY engine ./engine
 COPY seed-data ./seed-data
+RUN chown -R appuser:appuser /app
+
+USER appuser
 
 EXPOSE 8080
 

@@ -178,7 +178,7 @@ def get_insight_history(
 ) -> list[InsightLog]:
     """Return all persisted insight decisions for a student and pair."""
     uid = zep_user_id(tenant_id, student_ref)
-    response = get_client().graph.episode.get_by_user_id(user_id=uid, lastn=100)
+    response = get_client().graph.episode.get_by_user_id(user_id=uid)
     insights: list[InsightLog] = []
     episodes = response.episodes if response and response.episodes else []
     for episode in episodes:
@@ -205,6 +205,8 @@ def _event_from_episode(episode: Any, pair_id: str) -> Optional[dict[str, Any]]:
         return None
     if payload.get("event_type") != "confusion_event":
         return None
+    if not isinstance(payload.get("correct"), bool):
+        return None
     try:
         timestamp = _zep_timestamp(
             _parse_zep_timestamp(payload.get("timestamp") or episode.created_at)
@@ -221,8 +223,9 @@ def _event_from_episode(episode: Any, pair_id: str) -> Optional[dict[str, Any]]:
 
 
 def _events_for_pair(uid: str, pair_id: str) -> list[dict[str, Any]]:
-    # ``lastn`` is Zep's documented episode-listing argument (not pagination).
-    response = get_client().graph.episode.get_by_user_id(user_id=uid, lastn=100)
+    # Omit ``lastn`` so the SDK returns the full user history before we filter
+    # by pair; a busy student can otherwise have a pair's older events hidden.
+    response = get_client().graph.episode.get_by_user_id(user_id=uid)
     episodes = response.episodes if response and response.episodes else []
     events = [
         parsed

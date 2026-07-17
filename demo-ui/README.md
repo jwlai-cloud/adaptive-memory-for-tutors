@@ -5,7 +5,7 @@ authenticated REST API; it never talks to Zep directly.
 
 ## Run locally
 
-Start the API from the repository root (the `API_KEY` must match the UI key):
+Start the API from the repository root:
 
 ```bash
 uvicorn api.rest.app:app --reload
@@ -15,13 +15,13 @@ Then configure and run the UI:
 
 ```bash
 cp .env.local.example .env.local
-# Set NEXT_PUBLIC_API_KEY to the API_KEY from the repository .env file.
+# Set API_BASE_URL and BACKEND_API_KEY (matching the repository API_KEY).
 npm install
 npm run dev
 ```
 
-`NEXT_PUBLIC_API_BASE_URL` defaults to `http://localhost:8000` and can point
-at a deployed API for the demo.
+`API_BASE_URL` defaults to `http://localhost:8000` and can point at a deployed
+API; `BACKEND_API_KEY` remains server-only in the Next.js proxy.
 
 ## Demo pages
 

@@ -31,3 +31,11 @@ class RestApiSecurityTests(unittest.TestCase):
         )
 
         self.assertEqual(response.status_code, 404)
+
+    def test_pairs_rejects_non_slug_domains(self) -> None:
+        response = self.client.get(
+            "/v1/pairs?domain=japanese_kana",
+            headers={"Authorization": "Bearer test-demo-key"},
+        )
+
+        self.assertEqual(response.status_code, 404)

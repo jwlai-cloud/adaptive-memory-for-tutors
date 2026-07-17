@@ -29,3 +29,19 @@ class ZepEpisodeTimestampTests(unittest.TestCase):
             _parse_zep_timestamp(event["timestamp"]),
             datetime(2026, 7, 17, 12, 0, tzinfo=timezone.utc),
         )
+
+    def test_rejects_non_boolean_correctness_values(self) -> None:
+        episode = SimpleNamespace(
+            metadata={"event_type": "confusion_event", "pair_id": "pair-1"},
+            content=json.dumps(
+                {
+                    "event_type": "confusion_event",
+                    "correct": "true",
+                    "context": "malformed third-party event",
+                }
+            ),
+            created_at=datetime(2026, 7, 17, 12, 0, tzinfo=timezone.utc),
+            uuid_="episode-2",
+        )
+
+        self.assertIsNone(_event_from_episode(episode, "pair-1"))

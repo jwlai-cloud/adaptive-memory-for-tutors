@@ -28,9 +28,9 @@ running `vercel --prod`:
 
 | Variable | Value |
 | --- | --- |
-| `NEXT_PUBLIC_API_BASE_URL` | The HTTPS URL of `adaptive-tutor-api` |
-| `NEXT_PUBLIC_API_KEY` | The same low-privilege value as `demo-api-key` |
+| `API_BASE_URL` | The HTTPS URL of `adaptive-tutor-api` |
+| `BACKEND_API_KEY` | The same low-privilege value as `demo-api-key` |
 
-`NEXT_PUBLIC_API_KEY` is delivered to the browser because this demo makes
-direct REST calls. It is an access token, not a secret: do not reuse it for
-Zep, OpenAI, or any privileged account.
+Both values remain server-side in Vercel. The Next.js proxy attaches the token
+to requests to the backend, so it is not placed in browser JavaScript, an
+iframe URL, or the host page that embeds the widget.

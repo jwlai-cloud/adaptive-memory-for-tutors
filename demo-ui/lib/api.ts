@@ -30,14 +30,8 @@ export type PairState = {
   latest_insight: Insight | null;
 };
 
-const baseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:8000").replace(/\/$/, "");
-const apiKey = process.env.NEXT_PUBLIC_API_KEY;
-
 async function request<T>(path: string): Promise<T> {
-  if (!apiKey) throw new Error("Set NEXT_PUBLIC_API_KEY in demo-ui/.env.local to load live demo data.");
-  const response = await fetch(`${baseUrl}${path}`, {
-    headers: { Authorization: `Bearer ${apiKey}` }
-  });
+  const response = await fetch(`/api/backend${path}`);
   if (!response.ok) {
     const detail = await response.text();
     throw new Error(`API ${response.status}: ${detail}`);

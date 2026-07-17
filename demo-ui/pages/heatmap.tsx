@@ -10,7 +10,7 @@ const style: Record<Status, string> = { confused: "border-coral bg-coral/15", im
 function statusFor(state: PairState | null): Status {
   const outcomes = state?.recent_facts.map((fact) => fact.correct) || [];
   if (!outcomes.length) return "no_history";
-  if (outcomes.slice(-3).every(Boolean)) return "resolved";
+  if (outcomes.length >= 3 && outcomes.slice(-3).every(Boolean)) return "resolved";
   if (outcomes.slice(-3).filter(Boolean).length >= 2) return "improving";
   return "confused";
 }
