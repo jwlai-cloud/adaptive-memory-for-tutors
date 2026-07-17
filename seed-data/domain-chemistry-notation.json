@@ -10,6 +10,7 @@
         {"correct": false, "context": "wrote Na instead of Na+ in ionic equation - week 1"},
         {"correct": false, "context": "same mistake - week 1"},
         {"correct": true,  "context": "correct - week 2"},
+        {"correct": true,  "context": "correct - week 2"},
         {"correct": true,  "context": "correct - week 2, resolved"}
       ]
     }

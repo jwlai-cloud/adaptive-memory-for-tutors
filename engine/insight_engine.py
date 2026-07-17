@@ -6,6 +6,7 @@ module makes the separate, auditable decision about what a tutor should do.
 
 import json
 import os
+from datetime import timezone
 from typing import Any
 
 from dotenv import load_dotenv
@@ -43,8 +44,9 @@ chronological event history. Return exactly one decision and one sentence of
 plain-language reasoning suitable for a teacher or student.
 
 Decision rules:
-- retire: the student has at least three consecutive recent correct answers
-  after earlier mistakes, showing a sustained resolution.
+- retire: the student has a clear recent correct streak after earlier
+  mistakes, showing resolution. Require at least three consecutive recent
+  correct answers, with no newer mistake.
 - escalate: incorrect answers are still persistent or worsening (for example,
   at least two of the final three answers are incorrect).
 - no_change: the evidence is mixed or insufficient for either action.
@@ -85,6 +87,32 @@ def format_history(recent_facts: list[dict[str, Any]]) -> str:
     return "\n".join(lines)
 
 
+def _timestamp_for_prompt(event: ConfusionEvent) -> str:
+    timestamp = event.timestamp
+    if timestamp.tzinfo is None:
+        timestamp = timestamp.replace(tzinfo=timezone.utc)
+    return timestamp.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def _history_with_current_event(
+    recent_facts: list[dict[str, Any]], event: ConfusionEvent
+) -> list[dict[str, Any]]:
+    """Include the triggering event when Zep's episode listing is still catching up."""
+    current = {
+        "timestamp": _timestamp_for_prompt(event),
+        "correct": event.correct,
+        "context": event.context,
+    }
+    current_key = (current["timestamp"], current["correct"], current["context"])
+    existing_keys = {
+        (fact.get("timestamp"), fact.get("correct"), fact.get("context"))
+        for fact in recent_facts
+    }
+    if current_key not in existing_keys:
+        recent_facts = [*recent_facts, current]
+    return sorted(recent_facts, key=lambda fact: fact.get("timestamp", ""))
+
+
 def _parse_insight(content: str) -> tuple[InsightDecision, str]:
     """Validate the structured model response before returning it to callers."""
     try:
@@ -101,7 +129,8 @@ def _parse_insight(content: str) -> tuple[InsightDecision, str]:
 def evaluate(event: ConfusionEvent) -> InsightLog:
     """Evaluate the student's latest state and persist the resulting insight."""
     state = get_current_state(event.tenant_id, event.student_ref, event.pair_id)
-    history_str = format_history(state["recent_facts"])
+    recent_facts = _history_with_current_event(state["recent_facts"], event)
+    history_str = format_history(recent_facts)
     response = get_openai_client().chat.completions.create(
         model=INSIGHT_MODEL,
         messages=[
