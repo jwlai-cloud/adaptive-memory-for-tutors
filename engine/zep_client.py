@@ -56,6 +56,19 @@ def _zep_timestamp(value: datetime) -> str:
     return value.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
 
 
+def _parse_zep_timestamp(value: Any) -> datetime:
+    """Normalize Zep SDK datetimes and serialized episode timestamps to UTC."""
+    if isinstance(value, datetime):
+        parsed = value
+    elif isinstance(value, str):
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    else:
+        raise TypeError("episode timestamp must be a datetime or ISO-8601 string")
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc)
+
+
 def _retry_ingest(operation: Callable[[], _T]) -> _T:
     """Retry transient network, rate-limit, and server failures with backoff."""
     for attempt in range(_MAX_INGEST_ATTEMPTS):
@@ -191,8 +204,15 @@ def _event_from_episode(episode: Any, pair_id: str) -> Optional[dict[str, Any]]:
         return None
     if payload.get("event_type") != "confusion_event":
         return None
+    try:
+        timestamp = _zep_timestamp(
+            _parse_zep_timestamp(payload.get("timestamp") or episode.created_at)
+        )
+    except (AttributeError, TypeError, ValueError):
+        # A third-party or malformed episode must not break a student's timeline.
+        return None
     return {
-        "timestamp": payload.get("timestamp", episode.created_at),
+        "timestamp": timestamp,
         "correct": payload.get("correct"),
         "context": payload.get("context"),
         "episode_uuid": episode.uuid_,
@@ -290,7 +310,12 @@ def get_state_as_of(
             episode_metadata_filters=_pair_filter(pair_id),
         ),
     )
-    events = [event for event in _events_for_pair(uid, pair_id) if event["timestamp"] <= timestamp]
+    as_of_datetime = _parse_zep_timestamp(timestamp)
+    events = [
+        event
+        for event in _events_for_pair(uid, pair_id)
+        if _parse_zep_timestamp(event["timestamp"]) <= as_of_datetime
+    ]
     return {
         "user_id": uid,
         "pair_id": pair_id,
