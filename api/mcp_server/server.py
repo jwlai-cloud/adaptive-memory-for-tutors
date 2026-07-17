@@ -1,22 +1,10 @@
-"""
-MCP server surface (see docs/design_doc.md §5).
-
-This is the primary intended integration path: any Codex/Claude-built
-tutor agent adds this server's URL and immediately gets memory-augmented
-tutoring, no custom integration code needed.
-
-TODO:
-- Confirm current `mcp` package API shape (this scaffolds the intended
-  tool names/signatures per the design doc; verify against whatever MCP
-  SDK version ends up installed).
-- Add get_confusion_heatmap once the underlying multi-pair query exists.
-"""
+"""MCP tools for integrating the tutoring-memory engine into an agent."""
 
 from mcp.server.fastmcp import FastMCP
 
 from engine.insight_engine import evaluate
 from engine.schema import ConfusionEvent
-from engine.zep_client import log_event
+from engine.zep_client import get_current_state, get_latest_insight, log_event
 
 mcp = FastMCP("adaptive-memory-for-tutors")
 
@@ -48,8 +36,13 @@ def log_confusion_event(
 def get_insight_state(tenant_id: str, pair_id: str, student_ref: str) -> dict:
     """Get the current insight state for a student/concept-pair, without
     logging a new event. Use this before generating a new drill."""
-    # TODO: implement against persisted InsightLog / Zep current-state query
-    raise NotImplementedError("See TODO in engine/zep_client.py get_current_state")
+    state = get_current_state(tenant_id, student_ref, pair_id)
+    insight = get_latest_insight(tenant_id, student_ref, pair_id)
+    return {
+        "insight": insight.model_dump(mode="json") if insight else None,
+        "recent_facts": state["recent_facts"],
+        "graph_facts": state["graph_facts"],
+    }
 
 
 if __name__ == "__main__":

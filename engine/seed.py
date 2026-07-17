@@ -58,13 +58,18 @@ def seed_student(tenant_id: str, student_ref: str, domain: str, force: bool = Fa
     now = datetime.now(timezone.utc)
 
     events_written = 0
-    for pair in domain_seed["pairs"]:
+    for pair_index, pair in enumerate(domain_seed["pairs"]):
         for i, outcome in enumerate(pair["synthetic_history"]):
             event = ConfusionEvent(
                 tenant_id=tenant_id,
                 pair_id=pair["id"],
                 student_ref=student_ref,
-                timestamp=now - timedelta(days=(len(pair["synthetic_history"]) - i) * 2),
+                # Zep de-duplicates episodes with the same user and event time.
+                # Pair histories can otherwise overlap on the same synthetic day,
+                # so give each pair a stable minute offset while preserving order.
+                timestamp=now
+                - timedelta(days=(len(pair["synthetic_history"]) - i) * 2)
+                + timedelta(minutes=pair_index),
                 correct=outcome["correct"],
                 context=outcome.get("context"),
             )

@@ -23,7 +23,7 @@ from zep_cloud.types import (
     SearchFilters,
 )
 
-from engine.schema import ConfusionEvent
+from engine.schema import ConfusionEvent, InsightLog
 
 _client: Optional[Zep] = None
 _T = TypeVar("_T")
@@ -123,6 +123,63 @@ def log_event(event: ConfusionEvent) -> None:
     )
 
 
+def log_insight(insight: InsightLog) -> None:
+    """Persist a derived pedagogical decision as an auditable Zep episode."""
+    uid = ensure_user(insight.tenant_id, insight.student_ref)
+    created_at = _zep_timestamp(insight.timestamp)
+    payload = {
+        "event_type": "insight_log",
+        "tenant_id": insight.tenant_id,
+        "student_ref": insight.student_ref,
+        "pair_id": insight.pair_id,
+        "decision": insight.decision.value,
+        "reasoning": insight.reasoning,
+        "timestamp": created_at,
+    }
+    _retry_ingest(
+        lambda: get_client().graph.add(
+            data=json.dumps(payload, ensure_ascii=False),
+            type="json",
+            created_at=created_at,
+            metadata={
+                "event_type": "insight_log",
+                "pair_id": insight.pair_id,
+                "decision": insight.decision.value,
+            },
+            user_id=uid,
+            source_description="Adaptive tutor insight decision",
+        )
+    )
+
+
+def get_latest_insight(
+    tenant_id: str, student_ref: str, pair_id: str
+) -> Optional[InsightLog]:
+    """Return the newest persisted insight decision for a student and pair."""
+    insights = get_insight_history(tenant_id, student_ref, pair_id)
+    return max(insights, key=lambda insight: insight.timestamp, default=None)
+
+
+def get_insight_history(
+    tenant_id: str, student_ref: str, pair_id: str
+) -> list[InsightLog]:
+    """Return all persisted insight decisions for a student and pair."""
+    uid = zep_user_id(tenant_id, student_ref)
+    response = get_client().graph.episode.get_by_user_id(user_id=uid, lastn=100)
+    insights: list[InsightLog] = []
+    for episode in response.episodes:
+        metadata = episode.metadata or {}
+        if metadata.get("event_type") != "insight_log" or metadata.get("pair_id") != pair_id:
+            continue
+        try:
+            payload = json.loads(episode.content)
+            insights.append(InsightLog.model_validate(payload))
+        except (TypeError, json.JSONDecodeError, ValueError):
+            # Ignore malformed third-party episodes in this user graph.
+            continue
+    return sorted(insights, key=lambda insight: insight.timestamp)
+
+
 def _event_from_episode(episode: Any, pair_id: str) -> Optional[dict[str, Any]]:
     """Return our event record when an episode is one of this pair's events."""
     metadata = getattr(episode, "metadata", None) or {}
@@ -200,8 +257,10 @@ def get_current_state(tenant_id: str, student_ref: str, pair_id: str) -> dict:
     return {
         "user_id": uid,
         "pair_id": pair_id,
-        "events": _events_for_pair(uid, pair_id),
-        "recent_facts": [_edge_dict(edge) for edge in result.edges],
+        # These source episodes are the reliable outcome timeline for the
+        # reasoning layer; derived graph edges are asynchronous and can lag.
+        "recent_facts": _events_for_pair(uid, pair_id)[-8:],
+        "graph_facts": [_edge_dict(edge) for edge in result.edges],
     }
 
 
@@ -236,6 +295,6 @@ def get_state_as_of(
         "user_id": uid,
         "pair_id": pair_id,
         "as_of": timestamp,
-        "events": events,
-        "recent_facts": [_edge_dict(edge) for edge in result.edges],
+        "recent_facts": events[-8:],
+        "graph_facts": [_edge_dict(edge) for edge in result.edges],
     }
