@@ -7,16 +7,26 @@ the image or committed to Git.
 
 ## Cloud Run
 
-From the repository root, set `PROJECT_ID` and `REGION` to your Google Cloud
-project and region. Enable Cloud Run, Cloud Build, Artifact Registry, and
-Secret Manager, then add the three values from your local `.env` interactively
-to Secret Manager as `zep-api-key`, `openai-api-key`, and `demo-api-key`.
+The project deployment is scripted and pinned to the personal Google Cloud
+project `agent-era`. It reads the three required values from the local,
+gitignored `.env`, creates new Secret Manager versions, deploys the REST API
+from this repository's `Dockerfile`, waits for `/health`, and prints the URL.
 
-Deploy `adaptive-tutor-api` from this repository with the `Dockerfile`,
-`--min-instances=0`, the three secret environment variables, and
-`INSIGHT_MODEL=gpt-5.6-luna`. Deploy the MCP endpoint with the same source,
-overriding its command to `python -m api.mcp_server.server` and setting
-`MCP_TRANSPORT=streamable-http`. Its endpoint is `/mcp`.
+```bash
+python3 scripts/deploy_cloud_run.py
+```
+
+The script activates the `personal` gcloud configuration by default, prints
+the active account and project, refuses service-account identities, and asks
+for an explicit `deploy` confirmation. Pass `--account your-email@example.com`
+to select a specific already-authenticated personal Google account, or `--yes`
+only after reviewing the printed account and project.
+
+It deploys with `--min-instances=0`, the three secret environment variables,
+and `INSIGHT_MODEL=gpt-5.6-luna`. Deploy the optional MCP endpoint separately
+with the same source, overriding its command to
+`python -m api.mcp_server.server` and setting `MCP_TRANSPORT=streamable-http`.
+Its endpoint is `/mcp`.
 
 The REST service is publicly routable but still requires the demo bearer token.
 Set `CORS_ORIGINS` to the final Vercel production URL after deploying the UI.
