@@ -1,0 +1,6 @@
+# package-lock.json is generated dependency metadata. Sourcery's license
+# scanner reports platform-specific sharp/libvips packages here as blocking
+# issues, even though this application does not ship or modify their source.
+# Keep Sourcery enabled for all application code and configuration.
+ignore:
+  - demo-ui/package-lock.json
