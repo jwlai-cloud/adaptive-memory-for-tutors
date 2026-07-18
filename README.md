@@ -10,6 +10,34 @@ Architecture diagram: [`docs/architecture.mermaid`](docs/architecture.mermaid)
 
 ---
 
+## The memory handshake
+
+One integration call turns an observed attempt into a durable, explainable
+pedagogical action. The same flow works through the REST API or MCP tools.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Tutor as Any tutor agent<br/>or dashboard
+    participant API as REST API / MCP
+    participant Zep as Zep + Graphiti<br/>temporal memory
+    participant GPT as GPT-5.6<br/>Insight Engine
+
+    Tutor->>API: confusion event<br/>(pair, correct, context, time)
+    API->>Zep: write immutable event episode
+    API->>Zep: read recent + temporal graph state
+    Zep-->>GPT: ordered attempt history
+    GPT->>GPT: decide escalate / retire / no_change
+    GPT->>Zep: persist auditable InsightLog
+    GPT-->>Tutor: one-sentence action + reasoning
+```
+
+**What the tutor builder gets:** persistent student-specific memory, a
+point-in-time history, and one constrained action to drive the next tutor turn
+— without building a graph database or adaptive engine.
+
+---
+
 ## Quickstart (as a tutor builder)
 
 1. Get an API key — demo key pre-loaded with seeded practice history (see `engine/seed.py`).

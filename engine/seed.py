@@ -20,7 +20,7 @@ import argparse
 import json
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from engine.schema import ConfusionEvent
@@ -55,23 +55,28 @@ def seed_student(tenant_id: str, student_ref: str, domain: str, force: bool = Fa
         sys.exit(0)
 
     domain_seed = _load_domain_seed(domain)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
 
     events_written = 0
-    for pair in domain_seed["pairs"]:
+    for pair_index, pair in enumerate(domain_seed["pairs"]):
         for i, outcome in enumerate(pair["synthetic_history"]):
             event = ConfusionEvent(
                 tenant_id=tenant_id,
                 pair_id=pair["id"],
                 student_ref=student_ref,
-                timestamp=now - timedelta(days=(len(pair["synthetic_history"]) - i) * 2),
+                # Zep de-duplicates episodes with the same user and event time.
+                # Pair histories can otherwise overlap on the same synthetic day,
+                # so give each pair a stable minute offset while preserving order.
+                timestamp=now
+                - timedelta(days=(len(pair["synthetic_history"]) - i) * 2)
+                + timedelta(minutes=pair_index),
                 correct=outcome["correct"],
                 context=outcome.get("context"),
             )
             log_event(event)
             events_written += 1
 
-    marker.write_text(datetime.utcnow().isoformat())
+    marker.write_text(datetime.now(timezone.utc).isoformat())
     print(f"Seeded {events_written} events for {student_ref} in domain '{domain}'.")
 
 
